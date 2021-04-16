@@ -12,4 +12,4 @@ Utils.waitForDocumentReady().then(function() {
 Utils.waitForDocumentBody().then(function(body) {
     console.log('body is complete')
     console.log(body)
-})
+});

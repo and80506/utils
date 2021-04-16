@@ -24,8 +24,8 @@ export function waitForWindowReady(): Promise<void> {
   });
 }
 
-export const waitForDocumentReady: () => Promise<void> = memoize(() => {
-  return new Promise((resolve) => {
+export const waitForDocumentReady = memoize(() => {
+  return new Promise<void>((resolve) => {
     if (isDocumentReady() || isDocumentInteractive()) {
       return resolve();
     }
@@ -64,6 +64,5 @@ export function htmlEncode(html: string = ''): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
-
     .replace(/\//g, '&#x2F');
 }
