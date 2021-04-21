@@ -99,7 +99,7 @@ export function getObjectID(obj: Object): string {
   return uid;
 }
 
-function serializeArgs(args: any[]): string {
+function serializeArgs(args: ReadonlyArray<any>): string {
   try {
     return JSON.stringify(Array.prototype.slice.call(args), (subkey, val) => {
       if (typeof val === 'function') {
@@ -144,18 +144,33 @@ function getDefaultMemoizeOptions(): MemoizeOptions {
   return {};
 }
 
-export type Memoized = Function & { reset: () => void };
+export interface Memoized<T> {
+  (...args: ReadonlyArray<any>): T;
+  reset: () => void;
+}
 
-export function memoize<T extends Function>(
-  method: T,
+let memoizeGlobalIndex = 0;
+let memoizeGlobalIndexValidFrom = 0;
+export function memoize<T>(
+  method: (...args: ReadonlyArray<any>) => T,
   options: MemoizeOptions = getDefaultMemoizeOptions()
-): Memoized {
+): Memoized<T> {
   const { thisNamespace = false, time: cacheTime } = options;
 
   let simpleCache: { [key: string]: any };
   let thisCache: WeakMap<Object, any>;
 
+  let memoizeIndex = memoizeGlobalIndex;
+  memoizeGlobalIndex += 1;
+
   const memoizedFunction = function memoizedFunction(...args: any[]) {
+    if (memoizeIndex < memoizeGlobalIndexValidFrom) {
+      simpleCache = null;
+      thisCache = null;
+      memoizeIndex = memoizeGlobalIndex;
+      memoizeGlobalIndex += 1;
+    }
+
     let cache;
 
     if (thisNamespace) {
@@ -195,15 +210,19 @@ export function memoize<T extends Function>(
   return setFunctionName(result, `${options.name || getFunctionName(method)}::memoized`);
 }
 
+memoize.clear = () => {
+  memoizeGlobalIndexValidFrom = memoizeGlobalIndex;
+};
+
 interface FunctionWithMemoizeProperty<T> {
-  (...args: any[]): T;
+  (...args: ReadonlyArray<any>): T;
   __inline_memoize_cache?: { [key: string]: T };
 }
 
 export function inlineMemoize<T>(
   method: FunctionWithMemoizeProperty<T>,
-  logic: (...args: any[]) => T,
-  args: any[] = []
+  logic: (...args: ReadonlyArray<any>) => T,
+  args: ReadonlyArray<any> = []
 ): T {
   const cache = (method.__inline_memoize_cache = method.__inline_memoize_cache || {});
   const key = serializeArgs(args);
@@ -222,7 +241,7 @@ export function noop(...args: readonly any[]) {
   // pass
 }
 
-export function once(method: Function): Function {
+export function once(method: (...args: any[]) => any): (...args: any[]) => any {
   let called = false;
 
   const onceFunction = function (): any {
@@ -538,13 +557,17 @@ export function promiseDebounce<T>(
   return setFunctionName(promiseDebounced, `${getFunctionName(method)}::promiseDebounced`);
 }
 
-export function safeInterval(method: Function, time: number): { cancel: () => void } {
+export function safeInterval(
+  method: (...args: any[]) => any,
+  time: number
+): { cancel: () => void } {
   let timeout: ReturnType<typeof setTimeout>;
-
   function loop() {
     timeout = setTimeout(() => {
-      method();
-      loop();
+      let needStop = method();
+      if (!needStop) {
+        loop();
+      }
     }, time);
   }
 
@@ -765,13 +788,13 @@ export function get(item: { [key: string]: any }, path: string, def: any): any {
   return item === undefined ? def : item;
 }
 
-export function safeTimeout(method: Function, delay: number) {
-  let time = delay;
+export function safeTimeout(method: Function, time: number) {
   const interval = safeInterval(() => {
     time -= 100;
     if (time <= 0) {
-      interval.cancel();
       method();
+      interval.cancel();
+      return true;
     }
   }, 100);
 }
@@ -809,7 +832,7 @@ export function defineLazyProp<T>(
   });
 }
 
-export function arrayFrom<T>(item: Iterable<T>): ReadonlyArray<T> {
+export function arrayFrom<T>(item: Iterable<T> | ArrayLike<T>): ReadonlyArray<T> {
   // eslint-disable-line no-undef
   return Array.prototype.slice.call(item);
 }
@@ -1028,17 +1051,16 @@ export function isDefined(value: any): boolean {
   return value !== null && value !== undefined;
 }
 
-// TODO:
-export function cycle(method: Function): Promise<void> {
+export function cycle(method: Function, index = 0): Promise<void> {
   return new Promise((resolve, reject) => {
     let result;
     try {
-      result = method();
+      result = method(index);
       resolve(result);
     } catch (err) {
       reject(err);
+      cycle(method, ++index);
     }
-    cycle(method);
   });
 }
 
