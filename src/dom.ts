@@ -265,7 +265,6 @@ export function onClick(element: HTMLElement, handler: (Event: Event) => void) {
   element.addEventListener('click', handler);
   element.addEventListener('keypress', (event: KeyboardEvent) => {
     if (event.keyCode === KEY_CODES.ENTER || event.keyCode === KEY_CODES.SPACE) {
-      // eslint-disable-line unicorn/prefer-event-key
       return handler(event);
     }
   });
@@ -330,7 +329,7 @@ export function isLocalStorageEnabled(): boolean {
 }
 
 export function getBrowserLocales(): ReadonlyArray<{ country?: string; lang: string }> {
-  const nav = window.navigator; // eslint-disable-line compat/compat
+  const nav = window.navigator;
 
   const locales = nav.languages ? [...nav.languages] : [];
 
@@ -390,6 +389,7 @@ export function getElementSafe(
   }
 
   if (typeof id === 'string') {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     return doc.querySelector(id) as HTMLElement;
   }
 }
@@ -436,7 +436,6 @@ export function elementReady(id: ElementRefType): Promise<HTMLElement> {
   });
 }
 
-// eslint-disable-next-line unicorn/custom-error-definition
 export class PopupOpenError extends ExtendableError {}
 
 type PopupOptions = {
@@ -716,12 +715,12 @@ export function iframe(
     class: options.class
   }) as HTMLIFrameElement;
 
-  const isIE = window.navigator.userAgent.match(/MSIE|Edge/i); // eslint-disable-line compat/compat
+  const isIE = window.navigator.userAgent.match(/MSIE|Edge/i);
 
   if (!frame.hasAttribute('id')) {
     frame.setAttribute('id', uniqueID());
   }
-  awaitFrameLoad(frame);
+  void awaitFrameLoad(frame);
 
   if (container) {
     const el = getElement(container);
@@ -998,9 +997,13 @@ export function watchElementForClose(element: HTMLElement, handler: () => any): 
   sacrificialFrame = document.createElement('iframe');
   sacrificialFrame.setAttribute('name', `__detect_close_${uniqueID()}__`);
   sacrificialFrame.style.display = 'none';
-  awaitFrameWindow(sacrificialFrame).then((frameWin) => {
-    frameWin.addEventListener('unload', elementClosed);
-  });
+  awaitFrameWindow(sacrificialFrame)
+    .then((frameWin) => {
+      frameWin.addEventListener('unload', elementClosed);
+    })
+    .catch((_err) => {
+      // ignore error
+    });
   element.appendChild(sacrificialFrame);
 
   // Strategy 3: Poller
@@ -1217,7 +1220,6 @@ function inferCurrentScript(): HTMLScriptElement | void {
   }
 }
 
-// eslint-disable-next-line compat/compat
 let currentScript: any = typeof document !== 'undefined' ? document.currentScript : null;
 
 export const getCurrentScript = memoize(() => {

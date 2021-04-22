@@ -14,12 +14,16 @@ Utils.waitForDocumentBody().then(function(body) {
     console.log(body)
 });
 Utils.safeTimeout(() => {
-    console.log('console at 100ms');
+    console.log('safeTimeout console at 100ms');
 }, 700);
+// 重试多次直到错误时停止
 Utils.cycle((i) => {
-    if (Math.random() > 0.1) {
-        throw new Error('error occur when random more than 0.1');
+    if (Math.random() > 0.01) {
+        throw new Error('error occur when random more than 0.9');
     }
-    console.log('success cycle', i);
+    console.log('success cycle times:', i);
+}).then((result) => {
+    console.log('suc', result);
+}).catch((err) => {
+    console.log(err)
 });
-Utils.popup('9999');

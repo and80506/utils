@@ -59,9 +59,9 @@ export function isIE(): boolean {
   }
 
   return Boolean(
-    window.navigator && // eslint-disable-line compat/compat
-    window.navigator.userAgent && // eslint-disable-line compat/compat
-      /Edge|MSIE|rv:11/i.test(window.navigator.userAgent) // eslint-disable-line compat/compat
+    window.navigator &&
+      window.navigator.userAgent &&
+      /Edge|MSIE|rv:11/i.test(window.navigator.userAgent)
   );
 }
 

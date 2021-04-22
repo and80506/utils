@@ -216,6 +216,7 @@ memoize.clear = () => {
 
 interface FunctionWithMemoizeProperty<T> {
   (...args: ReadonlyArray<any>): T;
+  // eslint-disable-next-line camelcase
   __inline_memoize_cache?: { [key: string]: T };
 }
 
@@ -224,6 +225,7 @@ export function inlineMemoize<T>(
   logic: (...args: ReadonlyArray<any>) => T,
   args: ReadonlyArray<any> = []
 ): T {
+  // eslint-disable-next-line camelcase
   const cache = (method.__inline_memoize_cache = method.__inline_memoize_cache || {});
   const key = serializeArgs(args);
 
@@ -236,8 +238,7 @@ export function inlineMemoize<T>(
   return result;
 }
 
-// eslint-disable-next-line no-unused-vars
-export function noop(...args: readonly any[]) {
+export function noop(..._args: readonly any[]) {
   // pass
 }
 
@@ -286,7 +287,7 @@ export function match(str: string, pattern: RegExp): string | undefined {
 }
 
 export function awaitKey<T>(obj: { [key: string]: any }, key: string): Promise<T> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     let value = obj[key];
 
     if (value) {
@@ -721,7 +722,7 @@ export function eventEmitter(): EventEmitterType {
       if (handlerList) {
         for (const handler of handlerList) {
           promises.push(
-            new Promise((resolve, reject) => {
+            new Promise((resolve, _reject) => {
               const result = handler(...args);
               resolve(result);
             })
@@ -747,20 +748,20 @@ export function eventEmitter(): EventEmitterType {
   };
 }
 
-export function camelToDasherize(string: string): string {
-  return string.replace(/([A-Z])/g, (g) => {
+export function camelToDasherize(str: string): string {
+  return str.replace(/([A-Z])/g, (g) => {
     return `-${g.toLowerCase()}`;
   });
 }
 
-export function dasherizeToCamel(string: string): string {
-  return string.replace(/-([a-z])/g, (g) => {
+export function dasherizeToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (g) => {
     return g[1].toUpperCase();
   });
 }
 
-export function capitalizeFirstLetter(string: string): string {
-  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+export function capitalizeFirstLetter(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 export function get(item: { [key: string]: any }, path: string, def: any): any {
@@ -992,17 +993,12 @@ type RegexResultType = {
   replace: (text: string) => string;
 };
 
-export function regex(
-  pattern: string | RegExp,
-  string: string,
-  start: number = 0
-): RegexResultType {
+export function regex(pattern: string | RegExp, str: string, start: number = 0): RegexResultType {
   if (typeof pattern === 'string') {
-    // eslint-disable-next-line security/detect-non-literal-regexp
     pattern = new RegExp(pattern);
   }
 
-  const result = string.slice(start).match(pattern);
+  const result = str.slice(start).match(pattern);
 
   if (!result) {
     return;
@@ -1028,13 +1024,13 @@ export function regex(
   };
 }
 
-export function regexAll(pattern: string | RegExp, string: string): ReadonlyArray<RegexResultType> {
+export function regexAll(pattern: string | RegExp, str: string): ReadonlyArray<RegexResultType> {
   const matches = [];
   let start = 0;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const regmatch = regex(pattern, string, start);
+    const regmatch = regex(pattern, str, start);
 
     if (!regmatch) {
       break;
@@ -1051,15 +1047,14 @@ export function isDefined(value: any): boolean {
   return value !== null && value !== undefined;
 }
 
-export function cycle(method: Function, index = 0): Promise<void> {
+export function cycle(method: (...args: any[]) => any, index = 0): Promise<void> {
   return new Promise((resolve, reject) => {
-    let result;
     try {
-      result = method(index);
-      resolve(result);
+      method(index);
+      void cycle(method, ++index);
+      resolve();
     } catch (err) {
       reject(err);
-      cycle(method, ++index);
     }
   });
 }
@@ -1241,7 +1236,6 @@ export function dedupeErrors<T>(handler: (err: any) => T): (err: any) => T | voi
 export class ExtendableError extends Error {
   constructor(message: string) {
     super(message);
-    // eslint-disable-next-line unicorn/custom-error-definition
     this.name = this.constructor.name;
     if (typeof Error.captureStackTrace === 'function') {
       Error.captureStackTrace(this, this.constructor);
