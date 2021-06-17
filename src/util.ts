@@ -12,6 +12,9 @@ export type JSONType = JSONObject | JSONPrimitive;
 export type CancelableType = {
   cancel: () => void;
 };
+export interface IDisposable {
+  dispose(): void;
+}
 
 export function getFunctionName(fn: FunctionWithNameProperty): string {
   return fn.name || fn.__name__ || fn.displayName || 'anonymous';
@@ -1075,6 +1078,62 @@ export function debounce<T>(
 
   return setFunctionName(debounceWrapper, `${getFunctionName(method)}::debounced`);
 }
+
+export interface IdleDeadline {
+  readonly didTimeout: boolean;
+  timeRemaining(): number;
+}
+
+/**
+ * Execute the callback the next time the browser is idle
+ */
+export let runWhenIdle: (callback: (idle: IdleDeadline) => void, timeout?: number) => IDisposable;
+declare function requestIdleCallback(
+  callback: (args: IdleDeadline) => void,
+  options?: { timeout: number }
+): number;
+declare function cancelIdleCallback(handle: number): void;
+
+(function () {
+  if (typeof requestIdleCallback !== 'function' || typeof cancelIdleCallback !== 'function') {
+    const dummyIdle: IdleDeadline = Object.freeze({
+      didTimeout: true,
+      timeRemaining() {
+        return 15;
+      }
+    });
+    runWhenIdle = (runner) => {
+      const handle = setTimeout(() => runner(dummyIdle));
+      let disposed = false;
+      return {
+        dispose() {
+          if (disposed) {
+            return;
+          }
+          disposed = true;
+          clearTimeout(handle);
+        }
+      };
+    };
+  } else {
+    runWhenIdle = (runner, timeout?) => {
+      const handle: number = requestIdleCallback(
+        runner,
+        typeof timeout === 'number' ? { timeout } : undefined
+      );
+      let disposed = false;
+      return {
+        dispose() {
+          if (disposed) {
+            return;
+          }
+          disposed = true;
+          cancelIdleCallback(handle);
+        }
+      };
+    };
+  }
+})();
 
 export function isRegex(regx: any): boolean {
   return Object.prototype.toString.call(regx) === '[object RegExp]';
